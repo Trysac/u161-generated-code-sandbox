@@ -1,48 +1,43 @@
 # generated-code-sandbox
 
-[![PyPI version](https://img.shields.io/pypi/v/trysac-generated-code-sandbox)](https://pypi.org/project/trysac-generated-code-sandbox/)
-[![License: MIT](https://img.shields.io/pypi/l/trysac-generated-code-sandbox)](LICENSE)
-[![CI](https://github.com/Trysac/u161-generated-code-sandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/Trysac/u161-generated-code-sandbox/actions/workflows/ci.yml)
+Run LLM-generated Python snippets in a separate isolated interpreter with an AST import policy, timeout, output caps, scrubbed environment and POSIX resource limits.
 
-Run LLM-generated Python snippets in a separate isolated interpreter with an AST import policy, timeout, output caps, scrubbed environment and POSIX resource limits
+## The Problem
 
-## Problem
+Agents and code-interpreter features execute model-written Python, and running it with `exec` in the host process lets one bad snippet hang the service, fill memory, or read secrets from the environment. This library runs a snippet in a fresh interpreter process with explicit limits and honest guarantees.
 
-Describe in two or three sentences the concrete problem this utility solves, who hits it, and what
-they do today without it. Replace this paragraph when the first real feature lands.
+## Installation
 
-## Install
-
-```sh
-pip install trysac-generated-code-sandbox
-# or
-uv add trysac-generated-code-sandbox
+```bash
+pip install generated-code-sandbox
 ```
 
-Requires Python 3.10 or newer. No runtime dependencies.
-
-## Usage
+## Usage Example
 
 ```python
-import generated_code_sandbox
+from generated_code_sandbox import run_code, Limits
 
-# normalize() trims surrounding whitespace and lower-cases the text.
-print(generated_code_sandbox.normalize("  Hello World "))  # -> "hello world"
+# Standard execution
+result = run_code("print(sum(range(10)))")
+print(result.stdout.strip())  # 45
 
-# Blank input is rejected explicitly instead of returning an empty string.
-try:
-    generated_code_sandbox.normalize("   ")
-except ValueError as exc:
-    print(f"rejected: {exc}")
+# Execution with custom limits
+result = run_code("while True: pass", limits=Limits(timeout_s=0.2))
+print(result.status)  # timeout
 ```
 
-## Documentation
+## API Summary
 
-- [Architecture](docs/ARCHITECTURE.md) and [decisions](docs/decisions/)
-- [Testing](docs/TESTING.md) and [security](docs/SECURITY.md)
-- [Project record](docs/PROJECT.md) and [stack](docs/STACK.md)
-- [Changelog](CHANGELOG.md) and [contributing guide](CONTRIBUTING.md)
+- `run_code(source: str, *, policy=Policy(), limits=Limits(), ...)`: Executes snippet in an isolated subprocess.
+- `check_code(source: str, policy=Policy()) -> list[Violation]`: Statically validates code against AST policies.
+- `Policy`: Dataclass for configuration (`allowed_imports`, `forbidden_names`, `max_source_chars`).
+- `Limits`: Dataclass for resources (`timeout_s`, `max_output_bytes`, `memory_bytes`, `cpu_seconds`, etc.).
+- `SandboxError`: Raised for configuration or interpreter errors.
 
-## License
+## Why not `exec` with restricted globals?
 
-[MIT](LICENSE) (c) 2026 Miguel Gomez
+Why versus `exec` with restricted globals: a separate process with hard limits and no claims of language-level sandboxing. This approach provides a low-overhead, first-layer defense.
+
+## Security
+
+See [docs/SECURITY.md](docs/SECURITY.md) for full threat model details.

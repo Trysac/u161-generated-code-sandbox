@@ -9,4 +9,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Implement AST checking and subprocess sandbox with timeouts, scrubbed environment, and output caps.
 - Initial project structure from the factory utility template.

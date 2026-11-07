@@ -1,19 +1,21 @@
-# Security notes
+# Security Policy & Threat Model
 
-## Threat model
+`generated-code-sandbox` provides a low-overhead, first-layer defense against runaway or accidental hazards in LLM-generated Python snippets.
 
-`trysac-generated-code-sandbox` is a pure library without I/O. The main risks are:
+## What is Defended
 
-- **Supply chain**: a compromised dependency or CI action. Mitigation: no runtime dependencies,
-  Dependabot weekly updates, actions pinned to major versions, minimal workflow permissions.
-- **Leaked secrets**: tokens committed by mistake. Mitigation: `gitleaks` runs in the local gates
-  and in CI; `.env` files are git-ignored.
-- **Untrusted input**: callers may pass hostile strings. Mitigation: validate input and fail with
-  explicit exceptions; never `eval`, `exec` or deserialize untrusted data.
+- **Runaway execution loops** (enforced via timeout and process group termination).
+- **Output floods filling host memory** (enforced via capped stream reading and process killing).
+- **Host environment secret leakage** (scrubbed environment, passing only essential OS vars).
+- **Leftover scratch files in the working directory** (isolated temporary directory cleaned in finally).
+- **Accidental imports and forbidden builtins outside policy**.
 
-## Publishing
+## What is NOT Defended (Non-Guarantees)
 
-Releases are published to PyPI with trusted publishing (OIDC) when available, never with a
-long-lived token stored in the repository.
+- **Deliberate AST-level escapes** (AST inspection is a guardrail, not a secure boundary).
+- **Host filesystem access allowed to the running user account**.
+- **Direct network access if the host has open network access**.
+- **Grandchild processes on Windows**.
+- **Virtual memory exhaustion on platforms where RLIMIT_AS is unsupported or advisory (e.g. macOS)**.
 
-To report a vulnerability, see [SECURITY.md](../SECURITY.md).
+For hostile code execution, use containerized isolation, gVisor, MicroVMs, or WASM sandboxes.
