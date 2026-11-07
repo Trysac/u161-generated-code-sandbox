@@ -1,29 +1,27 @@
 # Architecture
 
-## Purpose
+## Overview
 
-`trysac-generated-code-sandbox` is a small, dependency-free Python library: Run LLM-generated Python snippets in a separate isolated interpreter with an AST import policy, timeout, output caps, scrubbed environment and POSIX resource limits
+`trysac-generated-code-sandbox` isolates the execution of dynamically generated Python snippets.
 
-## Shape
+### Pipeline
 
-```text
-caller code --> generated_code_sandbox (public API in __init__.py)
-                    |
-                    +-- pure functions, no I/O, no global state
-```
-
-- **Public API**: the names listed in `__all__` of `src/generated_code_sandbox/__init__.py`. Anything else is
-  internal and may change without a major version.
-- **Errors**: invalid input raises built-in exceptions (`ValueError`, `TypeError`) with a clear
-  message; the library never prints or exits.
-- **Side effects**: none. If a feature needs I/O, isolate it in its own module behind a small
-  interface and record the choice in an ADR.
-
-## Quality contract
-
-`scripts/check.py` is the single definition of the gates; `fabrica.json` tells the factory and CI
-how to run it. See [TESTING.md](TESTING.md).
-
-## Decisions
-
-Architecture decisions are recorded in [decisions/](decisions/) as numbered ADRs.
+1. **Pre-execution AST Check (`check_code`)**:
+   - Verifies source code size (`max_source_chars`).
+   - Parses code with `ast.parse`.
+   - Catches syntax errors.
+   - Validates all `ast.Import` and `ast.ImportFrom` nodes against `allowed_imports`.
+   - Checks identifier references against `forbidden_names`.
+   - Flags attribute access starting and ending with `__` (`dunder_attribute`).
+2. **Process Spawn & Environment Isolation**:
+   - Writes snippet to `main.py` in an ephemeral temporary directory.
+   - Invokes Python in isolated mode: `[python, '-I', '-B', '-X', 'utf8', 'main.py']`.
+   - Strips environment variables (scrubbed `env`).
+   - Sets POSIX limits via `resource.setrlimit` in `preexec_fn` (`RLIMIT_CPU`, `RLIMIT_AS`, `RLIMIT_FSIZE`, `RLIMIT_NOFILE`).
+3. **Capped Stream Consumption**:
+   - Reads `stdout` and `stderr` concurrently in worker threads.
+   - Capped at `max_output_bytes`.
+   - Terminates the process immediately upon exceeding limits.
+4. **Cleanup**:
+   - Guarantees termination via process group signals (`os.killpg`).
+   - Deletes temporary directories in a `finally` block.

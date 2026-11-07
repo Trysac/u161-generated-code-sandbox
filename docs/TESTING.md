@@ -3,18 +3,13 @@
 ## Running
 
 ```sh
-uv run pytest --cov=generated_code_sandbox   # tests with coverage report
-uv run python scripts/check.py      # every gate, as CI and the factory run it
+uv run pytest --cov=generated_code_sandbox
 ```
 
-## Policy
+## Coverage
 
-- Branch coverage of `src/generated_code_sandbox` must stay at or above 80 %; the gate fails below it.
-- Tests exercise the public API (`import generated_code_sandbox`) and assert every observable effect:
-  return values, raised exceptions and their messages.
-- Each bug fix starts with a failing test that reproduces it.
-- Tests are deterministic: no network, no wall clock, no dependence on test order.
+Branch coverage of `src/generated_code_sandbox` must stay at or above 80 %.
 
-## Layout
+## Existing Tests
 
-`tests/test_<module>.py` mirrors each public module. Shared fixtures go in `tests/conftest.py`.
+- `tests/test_generated_code_sandbox.py`: Covers the full API, verifying policies (imports, forbidden names), syntax errors, execution limits (timeouts, output caps), and result statuses. Exercises the public API `import generated_code_sandbox` and asserts observable outcomes including return values and raised exceptions.
