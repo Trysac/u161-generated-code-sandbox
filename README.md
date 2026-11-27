@@ -8,8 +8,10 @@ Agents and code-interpreter features execute model-written Python, and running i
 
 ## Installation
 
+Not published to PyPI yet. Install it from GitHub:
+
 ```bash
-pip install generated-code-sandbox
+pip install "git+https://github.com/Trysac/u161-generated-code-sandbox"
 ```
 
 ## Usage Example
